@@ -1,31 +1,79 @@
 services:
-  # ── Servicio Backend (API REST) ─────────────────────────────
+  # ── BASE DE DATOS ─────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: proyecto_db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+
+    volumes:
+      - db_data:/var/lib/mysql
+      # El SQL de inicialización vive en Data_Eval2, se monta con ruta relativa
+      - ../Data_Eval2/01_creacion_base_datos.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+
+    networks:
+      - proyecto_net
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "${DB_USER}",
+          "-p${DB_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── BACKEND (Node.js / Express) ───────────────────────────
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: proyecto_backend
     restart: unless-stopped
 
-    # ── Variables de entorno para conexión a la BD ─────────────
     environment:
-      PORT: 3000
-
-      # nombre del contenedor de MySQL
-      DB_HOST: proyecto_mysql
+      PORT: ${PORT:-3000}
+      DB_HOST: db
       DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
 
-      DB_NAME: proyecto_db
-      DB_USER: appuser
-      DB_PASSWORD: apppassword
-
-    # ── Exposición del servicio ────────────────────────────────
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
 
-    # ── Red compartida con MySQL y frontend ────────────────────
+    depends_on:
+      db:
+        condition: service_healthy
+
     networks:
-      - innovatech-net
+      - proyecto_net
 
-# ── Red externa compartida ─────────────────────────────────────
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  db_data:
+    driver: local
+
 networks:
-  innovatech-net:
-    external: true
+  proyecto_net:
+    name: proyecto_net
+    driver: bridge
