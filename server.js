@@ -149,9 +149,9 @@ app.use((err, req, res, next) => {
 });
 
 // Iniciar el servidor
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor backend corriendo en el puerto ${PORT}`);
-  console.log(`API disponible en: http://localhost:${PORT}`);
+  console.log(`API disponible en: http://0.0.0.0:${PORT}`);
 });
 
 // Exportar la app para pruebas
