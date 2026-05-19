@@ -71,3 +71,8 @@ jobs:
               ${{ secrets.DOCKERHUB_USERNAME }}/backend-eval2:latest
 
             echo "Deploy backend completado"
+
+
+    
+            
+            
